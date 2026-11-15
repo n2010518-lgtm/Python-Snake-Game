@@ -1,12 +1,21 @@
 
 """
 NEON SNAKE
-Main game engine
+Main game engine with game states
 """
+
+from enum import Enum
 
 import settings
 from snake import Snake
 from food import Food
+
+
+class GameStatus(Enum):
+    READY = "ready"
+    PLAYING = "playing"
+    PAUSED = "paused"
+    GAME_OVER = "game_over"
 
 
 class Game:
@@ -15,20 +24,48 @@ class Game:
         self.reset()
 
     def reset(self):
-        # IMPORTANT: Create snake FIRST
-        self.snake = Snake()
+        """Create a new game and reset all values."""
 
-        # Create food AFTER snake
+        self.snake = Snake()
         self.food = Food(self.snake.get_body())
 
         self.score = 0
         self.speed = settings.INITIAL_SPEED
 
-        self.game_over = False
+        self.status = GameStatus.READY
         self.won = False
 
+    def start(self):
+        """Start the game."""
+
+        if self.status == GameStatus.READY:
+            self.status = GameStatus.PLAYING
+
+    def pause(self):
+        """Pause the game."""
+
+        if self.status == GameStatus.PLAYING:
+            self.status = GameStatus.PAUSED
+
+    def resume(self):
+        """Resume a paused game."""
+
+        if self.status == GameStatus.PAUSED:
+            self.status = GameStatus.PLAYING
+
+    def toggle_pause(self):
+        """Switch between playing and paused."""
+
+        if self.status == GameStatus.PLAYING:
+            self.pause()
+
+        elif self.status == GameStatus.PAUSED:
+            self.resume()
+
     def update(self):
-        if self.game_over:
+        """Update one game step."""
+
+        if self.status != GameStatus.PLAYING:
             return
 
         next_head = self.snake.get_next_head()
@@ -41,7 +78,7 @@ class Game:
             x < 0 or x >= settings.COLS
             or y < 0 or y >= settings.ROWS
         ):
-            self.game_over = True
+            self.status = GameStatus.GAME_OVER
             return
 
         # Self collision
@@ -49,7 +86,7 @@ class Game:
         collision_body = body if eating else body[:-1]
 
         if next_head in collision_body:
-            self.game_over = True
+            self.status = GameStatus.GAME_OVER
             return
 
         # Move snake
@@ -63,7 +100,7 @@ class Game:
 
             if not spawned:
                 self.won = True
-                self.game_over = True
+                self.status = GameStatus.GAME_OVER
                 return
 
             self.speed = min(
@@ -72,7 +109,9 @@ class Game:
             )
 
     def set_direction(self, direction):
-        if not self.game_over:
+        """Change snake direction."""
+
+        if self.status == GameStatus.PLAYING:
             self.snake.change_direction(direction)
 
     def get_score(self):
@@ -87,18 +126,30 @@ class Game:
     def get_food(self):
         return self.food.get_position()
 
+    def get_status(self):
+        return self.status.value
+
     def is_game_over(self):
-        return self.game_over
+        return self.status == GameStatus.GAME_OVER
 
     def is_won(self):
         return self.won
 
+    def is_playing(self):
+        return self.status == GameStatus.PLAYING
+
+    def is_paused(self):
+        return self.status == GameStatus.PAUSED
+
     def get_state(self):
+        """Return all data needed by the interface."""
+
         return {
             "snake": self.get_snake(),
             "food": self.get_food(),
             "score": self.get_score(),
             "speed": self.get_speed(),
+            "status": self.get_status(),
             "game_over": self.is_game_over(),
             "won": self.is_won()
         }
