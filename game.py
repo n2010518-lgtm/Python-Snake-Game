@@ -1,7 +1,7 @@
 
 """
 NEON SNAKE
-Main game engine with game states
+Main game engine
 """
 
 from enum import Enum
@@ -9,6 +9,7 @@ from enum import Enum
 import settings
 from snake import Snake
 from food import Food
+from highscore import HighScore
 
 
 class GameStatus(Enum):
@@ -20,7 +21,8 @@ class GameStatus(Enum):
 
 class Game:
 
-    def __init__(self):
+    def __init__(self, highscore_file="highscore.json"):
+        self.highscore = HighScore(highscore_file)
         self.reset()
 
     def reset(self):
@@ -58,7 +60,6 @@ class Game:
 
         if self.status == GameStatus.PLAYING:
             self.pause()
-
         elif self.status == GameStatus.PAUSED:
             self.resume()
 
@@ -96,6 +97,10 @@ class Game:
         if eating:
             self.score += settings.FOOD_SCORE
 
+            # Update saved record
+            self.highscore.update(self.score)
+
+            # Spawn new food
             spawned = self.food.spawn(self.snake.get_body())
 
             if not spawned:
@@ -103,6 +108,7 @@ class Game:
                 self.status = GameStatus.GAME_OVER
                 return
 
+            # Increase game speed
             self.speed = min(
                 settings.MAX_SPEED,
                 self.speed + settings.SPEED_INCREASE
@@ -116,6 +122,9 @@ class Game:
 
     def get_score(self):
         return self.score
+
+    def get_best_score(self):
+        return self.highscore.get_best_score()
 
     def get_speed(self):
         return self.speed
@@ -148,6 +157,7 @@ class Game:
             "snake": self.get_snake(),
             "food": self.get_food(),
             "score": self.get_score(),
+            "best_score": self.get_best_score(),
             "speed": self.get_speed(),
             "status": self.get_status(),
             "game_over": self.is_game_over(),
